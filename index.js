@@ -17,6 +17,7 @@ const dtime = document.querySelector(".duration-time")
 const playListShow = document.querySelector(".btn-playlist")
 const volumeBtn = document.querySelector(".btn-volume")
 const videoBg = document.querySelector(".video-bg")
+const canvas = document.querySelector("#canvas")
 
 
 // const PlAYER_STORAGE_KEY = "MUSIC_PLAYER";
@@ -137,6 +138,7 @@ const app = {
                 heading.classList.add("playing")
             },300)
             cdThumbAnimate.play()
+            _this.renderEqualizer()
         }
         audio.onpause = () => {
             _this.isPlaying = false
@@ -271,6 +273,47 @@ const app = {
             .join(":")
             .replace(/\b(\d)\b/g, "0$1")
     },
+    renderEqualizer() {
+        let AudioContext = window.AudioContext || window.webkitAudioContext
+        let audioContext = new AudioContext()
+        let audioContextSrc = audioContext.createMediaElementSource(audio);        
+        let audioAnalyser = audioContext.createAnalyser();
+        canvasContext = canvas.getContext("2d");
+        audioContextSrc.connect(audioAnalyser);
+        audioAnalyser.connect(audioContext.destination);
+        
+        // Gán FFT size là 256 cho Analyser        
+        audioAnalyser.fftSize = 256;
+        let analyserFrequencyLength = audioAnalyser.frequencyBinCount;
+        let frequencyDataArray = new Uint8Array(analyserFrequencyLength);
+        // Lấy width và height của canvas
+        let canvasWith = canvas.width;
+        let canvasHeight = canvas.height;
+        // Tính toán barWidth và barHeight
+        let barWidth = (canvasWith / analyserFrequencyLength) * 2.5;
+        let barHeight;
+        let barIndex = 0;
+        const renderFrame = () => {
+        window.requestAnimationFrame(renderFrame);
+          barIndex = 0;
+          audioAnalyser.getByteFrequencyData(frequencyDataArray);
+          canvasContext.fillStyle = "#eee";
+          canvasContext.fillRect(0, 0, canvasWith, canvasHeight);
+          for (let i = 0; i < analyserFrequencyLength; i++) {
+            barHeight = frequencyDataArray[i]+100;
+            // Tạo màu cho thanh bar
+            let rgbRed = barHeight + (15 * (i / analyserFrequencyLength));
+            let rgbGreen = 255 * (i / analyserFrequencyLength);
+            let rgbBlue = 5;
+            
+            // Điền màu và vẽ bar
+            canvasContext.fillStyle = "rgb("+ rgbRed +", "+ rgbGreen +", "+ rgbBlue +")";
+            canvasContext.fillRect(barIndex, (canvasHeight - barHeight), barWidth, barHeight);
+            barIndex += (barWidth + 1);
+          }
+        }
+        renderFrame();
+    },
     loadCurrentSong() {
         heading.textContent = this.currentSong.name
         author.textContent = this.currentSong.singer
@@ -283,6 +326,8 @@ const app = {
         audio.oncanplay = () => {
             dtime.textContent = this.formatTimes(audio.duration)
         }
+        canvas.width= window.innerWidth
+        canvas.height= window.innerHeight
         // if(this.currentIndex == this.config.currentIndex){
         //     audio.currentTime = this.config.currentTime
         // }else{
@@ -299,21 +344,21 @@ const app = {
     //     repeatBtn.classList.toggle('active',this.isRepeat);
  
     // },
-    nextSong: function () {
+    nextSong() {
         this.currentIndex++
         if (this.currentIndex >= this.songs.length) {
             this.currentIndex = 0
         }
         this.loadCurrentSong()
     },
-    prevSong: function () {
+    prevSong() {
         this.currentIndex--
         if (this.currentIndex < 0) {
             this.currentIndex = this.songs.length - 1
         }
         this.loadCurrentSong()
     },
-    playRandomSong: function () {
+    playRandomSong() {
         let newIndex
         do {
             newIndex = Math.floor(Math.random() * this.songs.length)
@@ -321,7 +366,7 @@ const app = {
         this.currentIndex = newIndex
         this.loadCurrentSong()
     },
-    start: function () {
+    start() {
         // this.loadConfig()
 
         this.defineProperties()
