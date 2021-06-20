@@ -114,6 +114,46 @@ const app = {
             }
         })
     },
+    renderEqualizer() {
+        var audioContext = new (window.AudioContext || window.webkitAudioContext)()
+        let audioContextSrc = audioContext.createMediaElementSource(audio)      
+        let audioAnalyser = audioContext.createAnalyser()
+        canvasContext = canvas.getContext("2d")
+        audioContextSrc.connect(audioAnalyser)
+        audioAnalyser.connect(audioContext.destination)
+        
+        // Gán FFT size là 2048 cho Analyser        
+        audioAnalyser.fftSize = 1024;
+        let analyserFrequencyLength = audioAnalyser.frequencyBinCount
+        let frequencyDataArray = new Uint8Array(analyserFrequencyLength)
+        // Lấy width và height của canvas
+        let canvasWith = canvas.width
+        let canvasHeight = canvas.height
+        // Tính toán barWidth và barHeight
+        let barWidth = (canvasWith / analyserFrequencyLength) * 1.5
+        let barHeight;
+        let barIndex = 0
+        const renderFrame = () => {
+        window.requestAnimationFrame(renderFrame);
+          barIndex = 0;
+          audioAnalyser.getByteFrequencyData(frequencyDataArray)
+          canvasContext.fillStyle = "#090214";
+          canvasContext.fillRect(0, 0, canvasWith, canvasHeight)
+          for (let i = 0; i < analyserFrequencyLength; i++) {
+            barHeight = frequencyDataArray[i]+ 1
+            // Tạo màu cho thanh bar
+            let rgbRed = barHeight + (15 * (i / analyserFrequencyLength))
+            let rgbGreen = 255 * (i / analyserFrequencyLength)
+            let rgbBlue = 10;
+
+            // Điền màu và vẽ bar
+            canvasContext.fillStyle = "rgb("+ rgbRed +", "+ rgbGreen +", "+ rgbBlue +")"
+            canvasContext.fillRect(barIndex, (canvasHeight - barHeight), barWidth, barHeight)
+            barIndex += (barWidth + 1)
+          }
+        }
+        renderFrame();
+    },
     handleEvents() {
         const _this = this
         const cdThumbAnimate = cdThumb.animate([
@@ -137,8 +177,9 @@ const app = {
                 videoBg.classList.add("visible")
                 heading.classList.add("playing")
             },300)
-            cdThumbAnimate.play()
             _this.renderEqualizer()
+            cdThumbAnimate.play()
+
         }
         audio.onpause = () => {
             _this.isPlaying = false
@@ -273,47 +314,6 @@ const app = {
             .join(":")
             .replace(/\b(\d)\b/g, "0$1")
     },
-    renderEqualizer() {
-        let AudioContext = window.AudioContext || window.webkitAudioContext
-        let audioContext = new AudioContext()
-        let audioContextSrc = audioContext.createMediaElementSource(audio);        
-        let audioAnalyser = audioContext.createAnalyser();
-        canvasContext = canvas.getContext("2d");
-        audioContextSrc.connect(audioAnalyser);
-        audioAnalyser.connect(audioContext.destination);
-        
-        // Gán FFT size là 256 cho Analyser        
-        audioAnalyser.fftSize = 256;
-        let analyserFrequencyLength = audioAnalyser.frequencyBinCount;
-        let frequencyDataArray = new Uint8Array(analyserFrequencyLength);
-        // Lấy width và height của canvas
-        let canvasWith = canvas.width;
-        let canvasHeight = canvas.height;
-        // Tính toán barWidth và barHeight
-        let barWidth = (canvasWith / analyserFrequencyLength) * 2.5;
-        let barHeight;
-        let barIndex = 0;
-        const renderFrame = () => {
-        window.requestAnimationFrame(renderFrame);
-          barIndex = 0;
-          audioAnalyser.getByteFrequencyData(frequencyDataArray);
-          canvasContext.fillStyle = "#eee";
-          canvasContext.fillRect(0, 0, canvasWith, canvasHeight);
-          for (let i = 0; i < analyserFrequencyLength; i++) {
-            barHeight = frequencyDataArray[i]+100;
-            // Tạo màu cho thanh bar
-            let rgbRed = barHeight + (15 * (i / analyserFrequencyLength));
-            let rgbGreen = 255 * (i / analyserFrequencyLength);
-            let rgbBlue = 5;
-            
-            // Điền màu và vẽ bar
-            canvasContext.fillStyle = "rgb("+ rgbRed +", "+ rgbGreen +", "+ rgbBlue +")";
-            canvasContext.fillRect(barIndex, (canvasHeight - barHeight), barWidth, barHeight);
-            barIndex += (barWidth + 1);
-          }
-        }
-        renderFrame();
-    },
     loadCurrentSong() {
         heading.textContent = this.currentSong.name
         author.textContent = this.currentSong.singer
@@ -368,7 +368,6 @@ const app = {
     },
     start() {
         // this.loadConfig()
-
         this.defineProperties()
 
         this.handleEvents()
